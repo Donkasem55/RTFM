@@ -3,6 +3,10 @@ import os
 import sys
 import time
 import readchar
+import select
+import termios
+import tty
+
 
 homeico = ""
 fldico = ""
@@ -64,7 +68,7 @@ def mainloop(key, # default values
 		buffer += bodybg_ansi
 		buffer += " "*bodywidth
 		if line < height - 1:
-			buffer += "\n"
+			buffer += "\r\n"
 
 	sys.stdout.write("\033[2J\033[H" + buffer)
 	sys.stdout.flush()
@@ -74,14 +78,25 @@ if __name__ == "__main__":
 	sys.stdout.write("\033[?25l\033[?1049h")
 	sys.stdout.flush()
 	key = None
+	fd = sys.stdin.fileno()
+	oldset = termios.tcgetattr(fd)
+	tty.setraw(fd)
+
 	try:
 		while True:
 			mainloop(key=key, **args)
-			key = readchar.readkey()
+			ready, _, _ = select.select([sys.stdin], [], [], 0.10)
+			if ready:
+				key = readchar.readkey()
+			else:
+				key = None
+
 	except:
 		pass
 
 	sys.stdout.write("\033[?25h\033[?1049l")
 	sys.stdout.flush()
+
+	termios.tcsetattr(fd, termios.TCSADRAIN, oldset)
 
 
