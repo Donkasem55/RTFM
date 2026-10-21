@@ -216,6 +216,9 @@ def mainloop(key, # default values
 
 				size = getsizes(contents)
 				hl2 = 0
+				scroll = hl2 - 25
+				if scroll < 0:
+					scroll = 0
 
 			elif contents[hl2] == "..":
 				os.chdir("/" + "/".join(cwd.split("/")[:-1]))
@@ -239,6 +242,9 @@ def mainloop(key, # default values
 				
 				size = getsizes(contents)
 				hl2 = 0
+				scroll = hl2 - 25
+				if scroll < 0:
+					scroll = 0
 
 		elif scroll4:
 			os.chdir(pins[hl1][1])
@@ -262,6 +268,9 @@ def mainloop(key, # default values
 
 			size = getsizes(contents)
 			hl2 = 0
+			scroll = hl2 - 25
+			if scroll < 0:
+				scroll = 0
 
 
 	bodywidth = width - sidebar
@@ -441,6 +450,10 @@ if __name__ == "__main__":
 			key = readchar.readkey()
 			if key == rck.CTRL_C:
 				break
+
+	except KeyboardInterrupt:
+		pass
+
 	finally:
 		sys.stdout.write("\033[?25h\033[?1049l")
 		sys.stdout.flush()
