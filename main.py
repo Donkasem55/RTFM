@@ -23,13 +23,16 @@ args = {
 		(f"{fldico}  /", "/")
 	],
 	"logo": """
-█████  ██████ ██████ ███  ███
+▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+█████  ██████ ██████ ██▙  ▟██
 ██  ██   ██   ██     ████████
-██  ██   ██   ██     ██ ██ ██
+██  ██   ██   ██     ██ ▀▀ ██
 █████    ██   ████   ██    ██
 ██  ██   ██   ██     ██    ██
 ██  ██   ██   ██     ██    ██
 ██  ██   ██   ██     ██    ██
+Raine's Terminal File Manager
+▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
 """
 }
 cwd = os.getcwd()
@@ -41,24 +44,27 @@ scroll4 = False
 
 def mainloop(key, # default values
 		sidebarbg = (58, 25, 87),
-		bodybg = (90, 41, 135),
+		bodybg = [(90, 41, 135), (100, 49, 145)],
 		topbg = (75, 35, 110),
+		highlightbg = (115, 63, 161),
 
 		sidebar = 33,
-		sizewidth = 40,
-		rightreserve = 40,
+		sizewidth = 70,
+		rightreserve = 70,
 
 		pins = [],
 		pinsbold = True,
 		pinsleftpad = 3,
-		pinsuppad = 9,
+		pinsuppad = 11,
 		logo = "",
 
+		logocol = (161, 255, 107),
 		dirfg = (143, 221, 255),
 		filefg = (221, 176, 255),
 		zipfg = (255, 110, 110),
 		mediafg = (161, 255, 242),
 		codefg = (181, 255, 187),
+		gitfg = (255, 195, 122),
 
 		symlink = (255, 239, 161),
 		smallfile = (255, 202, 161),
@@ -72,6 +78,15 @@ def mainloop(key, # default values
 		scroll3 = True
 	if key == rck.DOWN:
 		hl2 += 1
+		scroll4 = False
+		scroll3 = True
+
+	if key == rck.PAGE_UP:
+		hl2 -= 20
+		scroll4 = False
+		scroll3 = True
+	if key == rck.PAGE_DOWN:
+		hl2 += 20
 		scroll4 = False
 		scroll3 = True
 
@@ -200,6 +215,7 @@ def mainloop(key, # default values
 					contents = [".."] + dirs + files
 
 				size = getsizes(contents)
+				hl2 = 0
 
 			elif contents[hl2] == "..":
 				os.chdir("/" + "/".join(cwd.split("/")[:-1]))
@@ -222,6 +238,7 @@ def mainloop(key, # default values
 					contents = [".."] + dirs + files
 				
 				size = getsizes(contents)
+				hl2 = 0
 
 		elif scroll4:
 			os.chdir(pins[hl1][1])
@@ -250,14 +267,17 @@ def mainloop(key, # default values
 	bodywidth = width - sidebar
 	ansirgb = lambda rgb, mode=48: f"\033[{mode};2;{rgb[0]};{rgb[1]};{rgb[2]}m" 
 	sidebarbg_ansi = ansirgb(sidebarbg)
-	bodybg_ansi = ansirgb(bodybg)
+	bodybg_ansi = ansirgb(bodybg[0])
 	topbg_ansi = ansirgb(topbg)
+	highlightbg_ansi = ansirgb(highlightbg)
+	logo_ansi = ansirgb(logocol, 38)
 
 	dir_ansi = ansirgb(dirfg, 38)
 	file_ansi = ansirgb(filefg, 38)
 	zip_ansi = ansirgb(zipfg, 38)
 	media_ansi = ansirgb(mediafg, 38)
 	code_ansi = ansirgb(codefg, 38)
+	git_ansi = ansirgb(gitfg, 38)
 
 	symlink_ansi = ansirgb(symlink, 38)
 	large_ansi = ansirgb(largefile, 38)
@@ -273,12 +293,15 @@ def mainloop(key, # default values
 			buffer += sidebarbg_ansi
 
 		if (line-pinsuppad) < len(pins) and (line-pinsuppad) >= 0:
+			buffer += dir_ansi
 			if pinsbold:
 				buffer += "\033[1m"
 
 			buffer += str(" "*pinsleftpad + pins[line-pinsuppad][0]).ljust(sidebar)
 
 		elif line < len(logoarr):
+			buffer += logo_ansi
+			buffer += "\033[1m"
 			buffer += logoarr[line].center(sidebar)
 
 		else:
@@ -292,17 +315,25 @@ def mainloop(key, # default values
 			buffer += bold + f"{cwd.replace(home, f"{homeico}  Home").replace(truehome, f"{homeico}  Home").replace("/", f"    ")}".center(bodywidth)
 
 		elif sc < len(contents) and sc >= 0:
+			bodybg_ansi = ansirgb(bodybg[len(bodybg) - 1 - sc % len(bodybg)])
 			if sc == hl2 and scroll3:
-				buffer += topbg_ansi
+				buffer += highlightbg_ansi
 			else:
 				buffer += bodybg_ansi
 			buffer += bold
 			if contents[sc] in dirs:
-				s = f"     {contents[sc]}".ljust(bodywidth - rightreserve)
+				if os.path.isdir(f"{contents[sc]}/.git"):
+					s = f"     {contents[sc]}".ljust(bodywidth - rightreserve)
+				else:
+					s = f"     {contents[sc]}".ljust(bodywidth - rightreserve)
 				if len(s) > bodywidth - rightreserve:
 					s = s[:(bodywidth-rightreserve)-3] + "..."
-				buffer += dir_ansi + s
-				buffer += " "*rightreserve
+				if os.path.isdir(f"{contents[sc]}/.git") or contents[sc] == ".git":
+					buffer += git_ansi + s
+				else:
+					buffer += dir_ansi + s
+
+				buffer += " "*sizewidth
 
 			else:
 				name = contents[sc]
@@ -312,18 +343,24 @@ def mainloop(key, # default values
 				elif name.endswith(".py"):
 					colour = code_ansi
 					fico = "󰌠  "
+
 				elif name.endswith(".sh"):
+					colour = code_ansi
+					fico = "  "
+				elif name.startswith(".bash"):
 					colour = code_ansi
 					fico = "  "
 				elif name.endswith(".ps1"):
 					colour = code_ansi
 					fico = "  "
+				elif name.startswith(".vim"):
+					colour = code_ansi
+					fico = "  "
+
 				elif name.endswith(".log"):
 					colour = file_ansi
 					fico = "  "
-				elif name.endswith(".zip") or name.endswith(".gz") or name.endswith(".xz") or name.endswith(".7z"):
-					colour = zip_ansi
-					fico = "  "
+
 				elif name != "..":
 					t = False
 					for i in [".mp4", ".mov"]:
@@ -338,7 +375,13 @@ def mainloop(key, # default values
 							fico = "  "
 							t = True
 
-					for i in [".html", ".htm", ".md"]:
+					for i in [".zip", ".gz", ".xz", ".7z", ".zst"]:
+						if name.endswith(i):
+							colour = zip_ansi
+							fico = "  "
+							t = True
+
+					for i in [".html", ".htm", ".md", ".sig"]:
 						if name.endswith(i):
 							colour = media_ansi
 							fico = "󰂺  "
@@ -373,6 +416,7 @@ def mainloop(key, # default values
 				buffer += s
 
 		else:
+			bodybg_ansi = ansirgb(bodybg[0])
 			buffer += bodybg_ansi
 			buffer += " "*bodywidth
 
