@@ -40,15 +40,29 @@ scroll3 = True
 scroll4 = False
 
 def mainloop(key, # default values
-		sidebar = 33,
 		sidebarbg = (58, 25, 87),
 		bodybg = (90, 41, 135),
 		topbg = (75, 35, 110),
+
+		sidebar = 33,
+		sizewidth = 40,
+		rightreserve = 40,
+
 		pins = [],
 		pinsbold = True,
 		pinsleftpad = 3,
 		pinsuppad = 9,
-		logo = ""
+		logo = "",
+
+		dirfg = (143, 221, 255),
+		filefg = (221, 176, 255),
+		zipfg = (255, 110, 110),
+		mediafg = (161, 255, 242),
+		codefg = (181, 255, 187),
+
+		symlink = (255, 239, 161),
+		smallfile = (255, 202, 161),
+		largefile = (255, 161, 161)
 	):
 
 	global hl1, hl2, scroll, scroll2, scroll3, scroll4
@@ -89,6 +103,59 @@ def mainloop(key, # default values
 		contents = dirs + files
 	else:
 		contents = [".."] + dirs + files
+
+	def getsizes(contents):
+		size = []
+		for i in contents:
+			if i == "..":
+				size.append(["", True, 0])
+
+			elif os.path.islink(i):
+				size.append([    f"  {os.path.realpath(i)}", True, 0])
+
+			else:
+				s = os.path.getsize(i)
+				g = []
+				if s >= 1024**8:
+					g.append(f"   {s/(1024**8):.2f} YB")
+					g.append(2)
+				elif s >= 1024**7:
+					g.append(f"   {s/(1024**7):.2f} ZB")
+					g.append(False)
+					g.append(2)
+				elif s >= 1024**6:
+					g.append(f"   {s/(1024**6):.2f} EB")
+					g.append(False)
+					g.append(2)
+				elif s >= 1024**5:
+					g.append(f"   {s/(1024**5):.2f} PB")
+					g.append(False)
+					g.append(2)
+				elif s >= 1024**4:
+					g.append(f"   {s/(1024**4):.2f} TB")
+					g.append(False)
+					g.append(2)
+				elif s >= 1024**3:
+					g.append(f"   {s/(1024**3):.2f} GB")
+					g.append(False)
+					g.append(2)
+				elif s >= 1024**2:
+					g.append(f"   {s/(1024**2):.2f} MB")
+					g.append(False)
+					g.append(2)
+				elif s >= 1024:
+					g.append(f"   {s/1024:.2f} KB")
+					g.append(False)
+					g.append(1)
+				else:
+					g.append(f"   {s} B")
+					g.append(False)
+					g.append(1)
+				size.append(g)
+
+		return size
+
+	size = getsizes(contents)
 
 	if hl2 >= len(contents):
 		hl2 = len(contents) - 1
@@ -132,6 +199,8 @@ def mainloop(key, # default values
 				else:
 					contents = [".."] + dirs + files
 
+				size = getsizes(contents)
+
 			elif contents[hl2] == "..":
 				os.chdir("/" + "/".join(cwd.split("/")[:-1]))
 				cwd = os.getcwd()
@@ -151,6 +220,8 @@ def mainloop(key, # default values
 					contents = dirs + files
 				else:
 					contents = [".."] + dirs + files
+				
+				size = getsizes(contents)
 
 		elif scroll4:
 			os.chdir(pins[hl1][1])
@@ -172,13 +243,25 @@ def mainloop(key, # default values
 			else:
 				contents = [".."] + dirs + files
 
+			size = getsizes(contents)
 			hl2 = 0
 
 
 	bodywidth = width - sidebar
-	sidebarbg_ansi = f"\033[48;2;{sidebarbg[0]};{sidebarbg[1]};{sidebarbg[2]}m"
-	bodybg_ansi = f"\033[48;2;{bodybg[0]};{bodybg[1]};{bodybg[2]}m"
-	topbg_ansi = f"\033[48;2;{topbg[0]};{topbg[1]};{topbg[2]}m"
+	ansirgb = lambda rgb, mode=48: f"\033[{mode};2;{rgb[0]};{rgb[1]};{rgb[2]}m" 
+	sidebarbg_ansi = ansirgb(sidebarbg)
+	bodybg_ansi = ansirgb(bodybg)
+	topbg_ansi = ansirgb(topbg)
+
+	dir_ansi = ansirgb(dirfg, 38)
+	file_ansi = ansirgb(filefg, 38)
+	zip_ansi = ansirgb(zipfg, 38)
+	media_ansi = ansirgb(mediafg, 38)
+	code_ansi = ansirgb(codefg, 38)
+
+	symlink_ansi = ansirgb(symlink, 38)
+	large_ansi = ansirgb(largefile, 38)
+	small_ansi = ansirgb(smallfile, 38)
 	logoarr = logo.split("\n")
 
 	for line in range(height):
@@ -215,19 +298,79 @@ def mainloop(key, # default values
 				buffer += bodybg_ansi
 			buffer += bold
 			if contents[sc] in dirs:
-				buffer += f"     {contents[sc]}".ljust(bodywidth)
+				s = f"     {contents[sc]}".ljust(bodywidth - rightreserve)
+				if len(s) > bodywidth - rightreserve:
+					s = s[:(bodywidth-rightreserve)-3] + "..."
+				buffer += dir_ansi + s
+				buffer += " "*rightreserve
+
 			else:
 				name = contents[sc]
 				if name.endswith(".pdf"):
+					colour = file_ansi
 					fico = "  "
 				elif name.endswith(".py"):
+					colour = code_ansi
 					fico = "󰌠  "
+				elif name.endswith(".sh"):
+					colour = code_ansi
+					fico = "  "
+				elif name.endswith(".ps1"):
+					colour = code_ansi
+					fico = "  "
+				elif name.endswith(".log"):
+					colour = file_ansi
+					fico = "  "
+				elif name.endswith(".zip") or name.endswith(".gz") or name.endswith(".xz") or name.endswith(".7z"):
+					colour = zip_ansi
+					fico = "  "
 				elif name != "..":
-					fico = "󰈔  "
+					t = False
+					for i in [".mp4", ".mov"]:
+						if name.endswith(i):
+							colour = media_ansi
+							fico = "  "
+							t = True
+
+					for i in [".img", ".iso"]:
+						if name.endswith(i):
+							colour = zip_ansi
+							fico = "  "
+							t = True
+
+					for i in [".html", ".htm", ".md"]:
+						if name.endswith(i):
+							colour = media_ansi
+							fico = "󰂺  "
+							t = True
+
+					for i in [".png", ".jpg", ".avi", ".ico", ".webp", ".jpeg", ".jpng"]:
+						if name.endswith(i):
+							colour = media_ansi
+							fico = "  "
+							t = True
+
+					if not t:
+						colour = file_ansi
+						fico = "󰈔  "
 				else:
+					colour = dir_ansi
 					fico = ""
 
-				buffer += f"   {fico}{name}".ljust(bodywidth)
+				s = f"   {fico}{name}".ljust(bodywidth - rightreserve)
+				if len(s) > bodywidth - rightreserve:
+					s = s[:(bodywidth-rightreserve)-3] + "..."
+				buffer += colour + s
+				s = f"{size[sc][0]}".ljust(sizewidth)
+				if len(s) > sizewidth:
+					s = s[:sizewidth-3] + "..."
+				if size[sc][2] == 0:
+					s = symlink_ansi + s
+				elif size[sc][2] == 1:
+					s = small_ansi + s
+				elif size[sc][2] == 2:
+					s = large_ansi + s
+				buffer += s
 
 		else:
 			buffer += bodybg_ansi
@@ -254,13 +397,10 @@ if __name__ == "__main__":
 			key = readchar.readkey()
 			if key == rck.CTRL_C:
 				break
+	finally:
+		sys.stdout.write("\033[?25h\033[?1049l")
+		sys.stdout.flush()
 
-	except Exception as e:
-		print(e)
-
-	sys.stdout.write("\033[?25h\033[?1049l")
-	sys.stdout.flush()
-
-	termios.tcsetattr(fd, termios.TCSADRAIN, oldset)
+		termios.tcsetattr(fd, termios.TCSADRAIN, oldset)
 
 
