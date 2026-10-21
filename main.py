@@ -81,7 +81,14 @@ def mainloop(key, # default values
 			dirs.append(i)
 		else:
 			files.append(i)
-	contents = [".."] + dirs + files
+
+	dirs.sort()
+	files.sort()
+
+	if cwd == "/":
+		contents = dirs + files
+	else:
+		contents = [".."] + dirs + files
 
 	if hl2 >= len(contents):
 		hl2 = len(contents) - 1
@@ -104,21 +111,49 @@ def mainloop(key, # default values
 			scroll2 = 0
 
 	if key == " " or key == rck.ENTER:
-		if contents[hl2] in dirs:
-			os.chdir(contents[hl2])
-			cwd = os.getcwd()
-			contents = os.listdir()
-			dirs = []
-			files = []
-			for i in contents:
-				if os.path.isdir(i):
-					dirs.append(i)
-				else:
-					files.append(i)
-			contents = [".."] + dirs + files
+		if scroll3:
+			if contents[hl2] in dirs:
+				os.chdir(contents[hl2])
+				cwd = os.getcwd()
+				contents = os.listdir()
+				dirs = []
+				files = []
+				for i in contents:
+					if os.path.isdir(i):
+						dirs.append(i)
+					else:
+						files.append(i)
 
-		elif contents[hl2] == "..":
-			os.chdir("/".join(cwd.split("/")[:-1]))
+				dirs.sort()
+				files.sort()
+
+				if cwd == "/":
+					contents = dirs + files
+				else:
+					contents = [".."] + dirs + files
+
+			elif contents[hl2] == "..":
+				os.chdir("/" + "/".join(cwd.split("/")[:-1]))
+				cwd = os.getcwd()
+				contents = os.listdir()
+				dirs = []
+				files = []
+				for i in contents:
+					if os.path.isdir(i):
+						dirs.append(i)
+					else:
+						files.append(i)
+
+				dirs.sort()
+				files.sort()
+
+				if cwd == "/":
+					contents = dirs + files
+				else:
+					contents = [".."] + dirs + files
+
+		elif scroll4:
+			os.chdir(pins[hl1][1])
 			cwd = os.getcwd()
 			contents = os.listdir()
 			dirs = []
@@ -128,7 +163,17 @@ def mainloop(key, # default values
 					dirs.append(i)
 				else:
 					files.append(i)
-			contents = [".."] + dirs + files
+
+			dirs.sort()
+			files.sort()
+
+			if cwd == "/":
+				contents = dirs + files
+			else:
+				contents = [".."] + dirs + files
+
+			hl2 = 0
+
 
 	bodywidth = width - sidebar
 	sidebarbg_ansi = f"\033[48;2;{sidebarbg[0]};{sidebarbg[1]};{sidebarbg[2]}m"
@@ -213,7 +258,7 @@ if __name__ == "__main__":
 	except Exception as e:
 		print(e)
 
-#	sys.stdout.write("\033[?25h\033[?1049l")
+	sys.stdout.write("\033[?25h\033[?1049l")
 	sys.stdout.flush()
 
 	termios.tcsetattr(fd, termios.TCSADRAIN, oldset)
