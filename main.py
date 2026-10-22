@@ -7,6 +7,7 @@ import select
 import termios
 import tty
 import readchar.key as rck
+import subprocess
 
 
 home = os.path.expanduser("~")
@@ -46,6 +47,7 @@ def mainloop(key, # default values
 		sidebarbg = (58, 25, 87),
 		bodybg = [(90, 41, 135), (100, 49, 145)],
 		topbg = (75, 35, 110),
+		topfg = (207, 255, 247),
 		highlightbg = (115, 63, 161),
 
 		sidebar = 33,
@@ -246,6 +248,10 @@ def mainloop(key, # default values
 				if scroll < 0:
 					scroll = 0
 
+			else:
+				path = cwd + "/" + contents[hl2]
+				subprocess.run(["xdg-open", path])
+
 		elif scroll4:
 			os.chdir(pins[hl1][1])
 			cwd = os.getcwd()
@@ -278,6 +284,7 @@ def mainloop(key, # default values
 	sidebarbg_ansi = ansirgb(sidebarbg)
 	bodybg_ansi = ansirgb(bodybg[0])
 	topbg_ansi = ansirgb(topbg)
+	topfg_ansi = ansirgb(topfg, 38)
 	highlightbg_ansi = ansirgb(highlightbg)
 	logo_ansi = ansirgb(logocol, 38)
 
@@ -320,7 +327,7 @@ def mainloop(key, # default values
 		sc = line - 2 + scroll
 
 		if line == 0:
-			buffer += topbg_ansi
+			buffer += topbg_ansi + topfg_ansi
 			buffer += bold + f"{cwd.replace(home, f"{homeico}  Home").replace(truehome, f"{homeico}  Home").replace("/", f"    ")}".center(bodywidth)
 
 		elif sc < len(contents) and sc >= 0:
